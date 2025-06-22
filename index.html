@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Phần mềm xếp lịch tự động</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .scrollable-table {
+            max-height: 300px;
+            overflow-y: auto;
+            overflow-x: auto;
+            display: block;
+        }
+        .scrollable-table table {
+            min-width: 600px;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 p-6">
+    <div class="max-w-5xl mx-auto bg-white p-6 rounded-lg shadow-lg">
+        <h1 class="text-2xl font-bold mb-4 text-center">Phần mềm xếp lịch tự động</h1>
+
+        <!-- Chọn quán -->
+        <div class="mb-4">
+            <label class="font-semibold">Chọn quán:</label>
+            <select id="storeSelect" onchange="updateStoreView()" class="border p-2 rounded ml-2">
+                <option value="Ngo">Ngô</option>
+                <option value="Xala">Xala</option>
+            </select>
+        </div>
+
+        <!-- Quản lý nhân viên -->
+        <div class="mb-6">
+            <h2 class="text-xl font-semibold mb-2">Quản lý nhân viên</h2>
+            <div class="flex gap-2 mb-2">
+                <input id="employeeName" type="text" placeholder="Tên nhân viên" class="border p-2 rounded flex-1">
+                <button onclick="addEmployee()" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">Thêm</button>
+            </div>
+            <table class="w-full border-collapse border">
+                <thead>
+                    <tr class="bg-gray-200">
+                        <th class="border p-2">Tên</th>
+                        <th class="border p-2">Cửa hàng</th>
+                        <th class="border p-2">Hành động</th>
+                    </tr>
+                </thead>
+                <tbody id="employeeTable"></tbody>
+            </table>
+        </div>
+
+        <!-- Thêm lịch thủ công -->
+        <div class="mb-6">
+            <h2 class="text-xl font-semibold mb-2">Thêm lịch thủ công</h2>
+            <div class="flex gap-2 mb-2">
+                <select id="manualEmployee" class="border p-2 rounded flex-1">
+                    <option value="">Chọn nhân viên</option>
+                </select>
+                <select id="manualDay" class="border p-2 rounded">
+                    <option value="t2">Thứ 2</option>
+                    <option value="t3">Thứ 3</option>
+                    <option value="t4">Thứ 4</option>
+                    <option value="t5">Thứ 5</option>
+                    <option value="t6">Thứ 6</option>
+                    <option value="t7">Thứ 7</option>
+                    <option value="cn">Chủ nhật</option>
+                </select>
+                <select id="manualShift" class="border p-2 rounded">
+                    <option value="Sang">Sáng</option>
+                    <option value="Chieu">Chiều</option>
+                    <option value="Toi">Tối</option>
+                </select>
+                <input id="manualSupport" type="checkbox" class="mt-2">
+                <label for="manualSupport" class="mt-1">Hỗ trợ</label>
+                <button onclick="addManualSchedule()" class="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600">Thêm</button>
+            </div>
+        </div>
+
+        <!-- Thêm lịch bằng văn bản -->
+        <div class="mb-6">
+            <h2 class="text-xl font-semibold mb-2">Thêm lịch bằng văn bản</h2>
+            <textarea id="textSchedule" rows="4" class="w-full border p-2 rounded mb-2" placeholder="Ví dụ: 
+Thịnh
+Sáng t2 t3
+Chiều 
+Tối"></textarea>
+            <button onclick="addTextSchedule()" class="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600">Thêm</button>
+        </div>
+
+        <!-- Lịch đã đăng ký -->
+        <div class="mb-6">
+            <h2 class="text-xl font-semibold mb-2">Lịch đã đăng ký</h2>
+            <div class="scrollable-table">
+                <table class="w-full border-collapse border">
+                    <thead>
+                        <tr class="bg-gray-200">
+                            <th class="border p-2">Nhân viên</th>
+                            <th class="border p-2">Cửa hàng</th>
+                            <th class="border p-2">Ngày</th>
+                            <th class="border p-2">Ca</th>
+                            <th class="border p-2">Vai trò</th>
+                            <th class="border p-2">Hành động</th>
+                        </tr>
+                    </thead>
+                    <tbody id="registeredScheduleTable"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Xếp lịch tự động -->
+        <div class="mb-6">
+            <h2 class="text-xl font-semibold mb-2">Xếp lịch tự động</h2>
+            <button onclick="generateAutoSchedule()" class="bg-purple-500 text-white px-4 py-2 rounded hover:bg-purple-600">Tạo lịch tự động</button>
+        </div>
+
+        <!-- Lịch làm việc (ẩn ban đầu) -->
+        <div id="finalScheduleSection" class="hidden mb-6">
+            <h2 class="text-xl font-semibold mb-2">Lịch làm việc</h2>
+            <table class="w-full border-collapse border">
+                <thead>
+                    <tr class="bg-gray-200">
+                        <th class="border p-2">Cửa hàng</th>
+                        <th class="border p-2">Ca</th>
+                        <th class="border p-2">T2</th>
+                        <th class="border p-2">T3</th>
+                        <th class="border p-2">T4</th>
+                        <th class="border p-2">T5</th>
+                        <th class="border p-2">T6</th>
+                        <th class="border p-2">T7</th>
+                        <th class="border p-2">CN</th>
+                    </tr>
+                </thead>
+                <tbody id="scheduleTable"></tbody>
+            </table>
+        </div>
+
+        <!-- Danh sách nhân viên thừa lịch làm -->
+        <div id="excessScheduleSection" class="hidden mb-6">
+            <h2 class="text-xl font-semibold mb-2">Danh sách nhân viên thừa lịch làm</h2>
+            <div class="scrollable-table">
+                <table class="w-full border-collapse border">
+                    <thead>
+                        <tr class="bg-gray-200">
+                            <th class="border p-2">Nhân viên</th>
+                            <th class="border p-2">Ca có thể làm</th>
+                        </tr>
+                    </thead>
+                    <tbody id="excessScheduleTable"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let employees = [];
+        let registeredSchedules = [];
+        let schedule = {
+            Ngo: { Sang: {}, Chieu: {}, Toi: {} },
+            Xala: { Sang: {}, Chieu: {}, Toi: {} }
+        };
+        const days = ['t2', 't3', 't4', 't5', 't6', 't7', 'cn'];
+        const shifts = ['Sang', 'Chieu', 'Toi'];
+        let currentStore = 'Ngo';
+        const TARGET_SHIFTS_PER_WEEK = 4;
+
+        // Hàm tạo màu ngẫu nhiên
+        function getRandomColor() {
+            const letters = '0123456789ABCDEF';
+            let color = '#';
+            for (let i = 0; i < 6; i++) {
+                color += letters[Math.floor(Math.random() * 16)];
+            }
+            return color;
+        }
+
+        function updateStoreView() {
+            currentStore = document.getElementById('storeSelect').value;
+            updateEmployeeTable();
+            updateEmployeeSelects();
+            updateRegisteredScheduleTable();
+            if (document.getElementById('finalScheduleSection').classList.contains('hidden')) {
+                document.getElementById('scheduleTable').innerHTML = '';
+                document.getElementById('excessScheduleTable').innerHTML = '';
+            } else {
+                updateScheduleTable();
+                updateExcessScheduleTable();
+            }
+        }
+
+        function addEmployee() {
+            const name = document.getElementById('employeeName').value.trim();
+            if (name) {
+                if (employees.find(emp => emp.name === name && emp.store === currentStore)) {
+                    alert('Nhân viên đã tồn tại trong quán này!');
+                    return;
+                }
+                const color = getRandomColor();
+                employees.push({ name, store: currentStore, color });
+                updateEmployeeTable();
+                updateEmployeeSelects();
+                document.getElementById('employeeName').value = '';
+            } else {
+                alert('Vui lòng nhập tên nhân viên!');
+            }
+        }
+
+        function updateEmployeeTable() {
+            const table = document.getElementById('employeeTable');
+            table.innerHTML = '';
+            employees
+                .filter(emp => emp.store === currentStore)
+                .forEach((emp, index) => {
+                    const globalIndex = employees.findIndex(e => e.name === emp.name && e.store === emp.store);
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td class="border p-2"><span style="color: ${emp.color}">${emp.name}</span></td>
+                        <td class="border p-2">${emp.store}</td>
+                        <td class="border p-2">
+                            <button onclick="editEmployee(${globalIndex})" class="bg-yellow-500 text-white px-2 py-1 rounded hover:bg-yellow-600">Sửa</button>
+                            <button onclick="deleteEmployee(${globalIndex})" class="bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600">Xóa</button>
+                        </td>
+                    `;
+                    table.appendChild(row);
+                });
+        }
+
+        function editEmployee(index) {
+            const emp = employees[index];
+            document.getElementById('employeeName').value = emp.name;
+            document.getElementById('storeSelect').value = emp.store;
+            currentStore = emp.store;
+            employees.splice(index, 1);
+            updateStoreView();
+        }
+
+        function deleteEmployee(index) {
+            const empName = employees[index].name;
+            employees.splice(index, 1);
+            registeredSchedules = registeredSchedules.filter(s => s.name !== empName || s.store !== currentStore);
+            updateStoreView();
+        }
+
+        function updateEmployeeSelects() {
+            const manualSelect = document.getElementById('manualEmployee');
+            manualSelect.innerHTML = '<option value="">Chọn nhân viên</option>';
+            employees
+                .filter(emp => emp.store === currentStore)
+                .forEach(emp => {
+                    manualSelect.innerHTML += `<option value="${emp.name}">${emp.name}</option>`;
+                });
+        }
+
+        function addManualSchedule() {
+            const name = document.getElementById('manualEmployee').value.trim();
+            const day = document.getElementById('manualDay').value;
+            const shift = document.getElementById('manualShift').value;
+            const isSupport = document.getElementById('manualSupport').checked;
+            if (!name) {
+                alert('Vui lòng chọn nhân viên!');
+                return;
+            }
+            const emp = employees.find(e => e.name === name && e.store === currentStore);
+            if (!emp) {
+                alert('Nhân viên không thuộc quán này!');
+                return;
+            }
+            const existing = registeredSchedules.find(s => s.name === name && s.day === day && s.shift === shift && s.store === currentStore);
+            if (existing) {
+                alert('Nhân viên đã đăng ký ca này!');
+                return;
+            }
+            registeredSchedules.push({ name, store: currentStore, day, shift, isSupport });
+            updateRegisteredScheduleTable();
+            document.getElementById('manualEmployee').value = '';
+            document.getElementById('manualSupport').checked = false;
+        }
+
+        function addTextSchedule() {
+            const text = document.getElementById('textSchedule').value.trim();
+            const lines = text.split('\n').map(line => line.trim()).filter(line => line.length > 0);
+            if (lines.length < 2) {
+                alert('Định dạng không hợp lệ! Vui lòng nhập tên nhân viên và ít nhất một dòng ca/ngày.');
+                return;
+            }
+            let currentEmployee = '';
+            let errors = [];
+            for (let i = 0; i < lines.length; i++) {
+                const line = lines[i];
+                if (!currentEmployee) {
+                    currentEmployee = line;
+                    const emp = employees.find(e => e.name.toLowerCase() === currentEmployee.toLowerCase() && e.store === currentStore);
+                    if (!emp) {
+                        errors.push(`Dòng ${i + 1}: Nhân viên "${currentEmployee}" không tồn tại trong quán ${currentStore}.`);
+                        currentEmployee = '';
+                        continue;
+                    }
+                    currentEmployee = emp.name; // Chuẩn hóa tên nhân viên
+                } else {
+                    const parts = line.split(/\s+/).filter(p => p);
+                    if (parts.length < 1) {
+                        errors.push(`Dòng ${i + 1}: Dòng "${line}" không hợp lệ, cần ít nhất một ca.`);
+                        continue;
+                    }
+                    let shift = parts[0].toLowerCase();
+                    // Chuẩn hóa ca: chấp nhận Sáng, sáng, Sang -> Sang
+                    if (shift === 'sáng' || shift === 'sang') shift = 'Sang';
+                    else if (shift === 'chiều' || shift === 'chieu') shift = 'Chieu';
+                    else if (shift === 'tối' || shift === 'toi') shift = 'Toi';
+                    else {
+                        errors.push(`Dòng ${i + 1}: Ca "${parts[0]}" không hợp lệ. Các ca hợp lệ là: Sáng, Chiều, Tối.`);
+                        continue;
+                    }
+                    const lineDays = parts.length > 1 ? parts.slice(1) : [];
+                    if (lineDays.length === 0) {
+                        // Bỏ qua dòng chỉ có ca mà không có ngày, không báo lỗi
+                        continue;
+                    }
+                    for (let day of lineDays) {
+                        day = day.toLowerCase();
+                        if (!days.includes(day)) {
+                            errors.push(`Dòng ${i + 1}: Ngày "${day}" không hợp lệ. Các ngày hợp lệ là: t2, t3, t4, t5, t6, t7, cn.`);
+                            continue;
+                        }
+                        if (!registeredSchedules.find(s => s.name.toLowerCase() === currentEmployee.toLowerCase() && s.day === day && s.shift === shift && s.store === currentStore)) {
+                            registeredSchedules.push({ name: currentEmployee, store: currentStore, day, shift, isSupport: false });
+                        }
+                    }
+                }
+            }
+            if (errors.length > 0) {
+                alert('Có lỗi trong dữ liệu nhập:\n' + errors.join('\n'));
+            } else {
+                alert('Thêm lịch thành công!');
+            }
+            updateRegisteredScheduleTable();
+            document.getElementById('textSchedule').value = '';
+        }
+
+        function updateRegisteredScheduleTable() {
+            const table = document.getElementById('registeredScheduleTable');
+            table.innerHTML = '';
+            registeredSchedules
+                .filter(s => s.store === currentStore)
+                .forEach((s, index) => {
+                    const globalIndex = registeredSchedules.findIndex(rs => rs.name === s.name && rs.store === s.store && rs.day === s.day && rs.shift === s.shift && rs.isSupport === s.isSupport);
+                    const emp = employees.find(e => e.name === s.name && e.store === s.store);
+                    const color = emp ? emp.color : '#000000';
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td class="border p-2"><span style="color: ${color}">${s.name}</span></td>
+                        <td class="border p-2">${s.store}</td>
+                        <td class="border p-2">${s.day}</td>
+                        <td class="border p-2">${s.shift}</td>
+                        <td class="border p-2">${s.isSupport ? 'Hỗ trợ' : 'Chính'}</td>
+                        <td class="border p-2">
+                            <button onclick="editRegisteredSchedule(${globalIndex})" class="bg-yellow-500 text-white px-2 py-1 rounded hover:bg-yellow-600">Sửa</button>
+                            <button onclick="deleteRegisteredSchedule(${globalIndex})" class="bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600">Xóa</button>
+                        </td>
+                    `;
+                    table.appendChild(row);
+                });
+        }
+
+        function editRegisteredSchedule(index) {
+            const s = registeredSchedules[index];
+            document.getElementById('storeSelect').value = s.store;
+            currentStore = s.store;
+            updateEmployeeSelects();
+            document.getElementById('manualEmployee').value = s.name;
+            document.getElementById('manualDay').value = s.day;
+            document.getElementById('manualShift').value = s.shift;
+            document.getElementById('manualSupport').checked = s.isSupport;
+            registeredSchedules.splice(index, 1);
+            updateRegisteredScheduleTable();
+        }
+
+        function deleteRegisteredSchedule(index) {
+            registeredSchedules.splice(index, 1);
+            updateRegisteredScheduleTable();
+        }
+
+        function generateAutoSchedule() {
+            // Reset schedule for current store only
+            schedule[currentStore] = { Sang: {}, Chieu: {}, Toi: {} };
+            // Count shifts per employee for current store
+            const shiftCount = {};
+            employees.filter(emp => emp.store === currentStore).forEach(emp => shiftCount[emp.name] = 0);
+            // Track assigned schedules to avoid double assignment
+            const assignedSchedules = new Set();
+            // Collect available shifts for current store
+            const availableShifts = [];
+            shifts.forEach(shift => {
+                days.forEach(day => {
+                    availableShifts.push({ store: currentStore, shift, day });
+                });
+            });
+            // Shuffle shifts
+            for (let i = availableShifts.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [availableShifts[i], availableShifts[j]] = [availableShifts[j], availableShifts[i]];
+            }
+            // Step 1: Assign support roles for current store
+            const storeSchedules = registeredSchedules.filter(s => s.store === currentStore);
+            for (let { shift, day } of availableShifts) {
+                if (!schedule[currentStore][shift][day]) {
+                    schedule[currentStore][shift][day] = { main: [], support: [] };
+                }
+                const supportSchedules = storeSchedules.filter(s => s.isSupport && s.day === day && s.shift === shift && schedule[currentStore][shift][day].support.length < 2);
+                supportSchedules.forEach(s => {
+                    if (!schedule[currentStore][shift][day].support.includes(s.name)) {
+                        schedule[currentStore][shift][day].support.push(s.name);
+                        assignedSchedules.add(`${s.name}-${currentStore}-${day}-${shift}`);
+                    }
+                });
+            }
+            // Step 2: Assign main roles for current store's employees, prioritizing < 4 shifts
+            const mainSchedules = storeSchedules.filter(s => !s.isSupport);
+            for (let { shift, day } of availableShifts) {
+                if (!schedule[currentStore][shift][day].main.length) {
+                    let candidates = mainSchedules.filter(s => 
+                        s.day === day && 
+                        s.shift === shift && 
+                        shiftCount[s.name] < TARGET_SHIFTS_PER_WEEK &&
+                        !assignedSchedules.has(`${s.name}-${currentStore}-${day}-${shift}`)
+                    );
+                    if (candidates.length === 0) {
+                        candidates = mainSchedules.filter(s => 
+                            s.day === day && 
+                            s.shift === shift &&
+                            !assignedSchedules.has(`${s.name}-${currentStore}-${day}-${shift}`)
+                        );
+                    }
+                    if (candidates.length > 0) {
+                        const emp = candidates[Math.floor(Math.random() * candidates.length)];
+                        schedule[currentStore][shift][day].main.push(emp.name);
+                        shiftCount[emp.name]++;
+                        assignedSchedules.add(`${emp.name}-${currentStore}-${day}-${shift}`);
+                    }
+                }
+            }
+            // Step 3: Skip filling remaining slots with excess employees from other stores
+            updateScheduleTable();
+            updateExcessScheduleTable();
+            document.getElementById('finalScheduleSection').classList.remove('hidden');
+            document.getElementById('excessScheduleSection').classList.remove('hidden');
+        }
+
+        function updateScheduleTable() {
+            const table = document.getElementById('scheduleTable');
+            table.innerHTML = '';
+            shifts.forEach(shift => {
+                const row = document.createElement('tr');
+                let cells = `<td class="border p-2">${currentStore}</td><td class="border p-2">${shift}</td>`;
+                days.forEach(day => {
+                    const slot = schedule[currentStore][shift][day] || { main: [], support: [] };
+                    cells += `<td class="border p-2">
+                        <div contenteditable="true" onblur="editSchedule('${currentStore}', '${shift}', '${day}', this.innerText, 'main')" class="mb-1">
+                            ${slot.main.map(name => {
+                                const emp = employees.find(e => e.name === name && e.store === currentStore);
+                                const color = emp ? emp.color : '#000000';
+                                return `<span style="color: ${color}">${name}</span>`;
+                            }).join(', ')}
+                        </div>
+                        <div contenteditable="true" onblur="editSchedule('${currentStore}', '${shift}', '${day}', this.innerText, 'support')" class="text-sm text-gray-500">
+                            Hỗ trợ: ${slot.support.map(name => {
+                                const emp = employees.find(e => e.name === name && e.store === currentStore);
+                                const color = emp ? emp.color : '#000000';
+                                return `<span style="color: ${color}">${name}</span>`;
+                            }).join(', ')}
+                        </div>
+                    </td>`;
+                });
+                row.innerHTML = cells;
+                table.appendChild(row);
+            });
+        }
+
+        function editSchedule(store, shift, day, text, type) {
+            const names = text.replace(type === 'support' ? 'Hỗ trợ: ' : '', '').split(',').map(n => n.trim()).filter(n => {
+                const emp = employees.find(e => e.name === n && e.store === store);
+                return emp;
+            });
+            if (!schedule[store][shift][day]) {
+                schedule[store][shift][day] = { main: [], support: [] };
+            }
+            if (type === 'main') {
+                schedule[store][shift][day].main = names.slice(0, 1); // Limit to 1 main employee
+            } else {
+                schedule[store][shift][day].support = names.slice(0, 2); // Limit to 2 support employees
+            }
+            updateScheduleTable();
+            updateExcessScheduleTable();
+        }
+
+        function updateExcessScheduleTable() {
+            const table = document.getElementById('excessScheduleTable');
+            table.innerHTML = '';
+            const assigned = new Set();
+            for (let shift of shifts) {
+                for (let day of days) {
+                    const slot = schedule[currentStore][shift][day] || { main: [], support: [] };
+                    slot.main.forEach(name => assigned.add(`${name}-${currentStore}-${day}-${shift}`));
+                    slot.support.forEach(name => assigned.add(`${name}-${currentStore}-${day}-${shift}`));
+                }
+            }
+            const excessEmployees = {};
+            registeredSchedules.filter(s => !s.isSupport && s.store === currentStore).forEach(s => {
+                const key = `${s.name}-${s.store}-${s.day}-${s.shift}`;
+                if (!assigned.has(key)) {
+                    if (!excessEmployees[s.name]) excessEmployees[s.name] = [];
+                    excessEmployees[s.name].push(`${s.day} ${s.shift}`);
+                }
+            });
+            for (let name in excessEmployees) {
+                const emp = employees.find(e => e.name === name && e.store === currentStore);
+                const color = emp ? emp.color : '#000000';
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td class="border p-2"><span style="color: ${color}">${name}</span></td>
+                    <td class="border p-2">${excessEmployees[name].join(', ')}</td>
+                `;
+                table.appendChild(row);
+            }
+        }
+
+        // Initialize view
+        updateStoreView();
+    </script>
+</body>
+</html>
